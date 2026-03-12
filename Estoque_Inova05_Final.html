@@ -265,16 +265,21 @@ function calc(){
 
 document.querySelectorAll("#table tbody tr").forEach(r=>{
 
-const custo=parseFloat(r.cells[3].innerText)||0;
+const custo=parseFloat(r.cells[3].innerText.replace(",",".").replace(/\./g,""))||0;
 
-const qtd=parseFloat(r.querySelector(".qtd").innerText)||0;
+const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
 
 const min=parseFloat(r.cells[7].innerText)||0;
 
-r.querySelector(".val").innerText=(custo*qtd).toFixed(2);
+const valor=custo*metros;
 
-if(qtd<min) r.querySelector(".qtd").classList.add("low");
-else r.querySelector(".qtd").classList.remove("low");
+r.querySelector(".val").innerText =
+valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+if(metros<min)
+r.querySelector(".qtd").classList.add("low");
+else
+r.querySelector(".qtd").classList.remove("low");
 
 });
 
@@ -298,3 +303,4 @@ pullData();
 
 </body>
 </html>
+
