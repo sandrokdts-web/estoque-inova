@@ -265,7 +265,11 @@ function calc(){
 
 document.querySelectorAll("#table tbody tr").forEach(r=>{
 
-const custo=parseFloat(r.cells[3].innerText.replace(",",".").replace(/\./g,""))||0;
+let custoTexto=r.cells[3].innerText.trim();
+
+custoTexto=custoTexto.replace(",","."); 
+
+const custo=parseFloat(custoTexto)||0;
 
 const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
 
@@ -273,7 +277,7 @@ const min=parseFloat(r.cells[7].innerText)||0;
 
 const valor=custo*metros;
 
-r.querySelector(".val").innerText =
+r.querySelector(".val").innerText=
 valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 if(metros<min)
@@ -303,4 +307,5 @@ pullData();
 
 </body>
 </html>
+
 
