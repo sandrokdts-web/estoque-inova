@@ -68,7 +68,7 @@
     async function pullData() {
         showLoading(true);
         try {
-            const response = await fetch(WEB_APP_URL + "?action=read");
+            const response = await fetch(WEB_APP_URL + "?action=ler");
             const data = await response.json();
             const tbody = document.querySelector("#stockTable tbody");
             tbody.innerHTML = "";
@@ -163,5 +163,6 @@
 </body>
 
 </html>
+
 
 
