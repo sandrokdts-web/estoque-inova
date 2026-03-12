@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Inova Cloud Stock - Sistema Oficial</title>
+    <style>
+        :root { --inova-green: #008d4c; --inova-blue: #0056b3; --danger: #d9534f; --warning: #f39c12; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 1550px; margin: auto; background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 25px; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--inova-green); padding-bottom: 15px; margin-bottom: 20px; }
+        .status-bar { background: #eee; padding: 15px; border-radius: 5px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-save { background: var(--inova-green); font-size: 16px; }
+        .btn-add { background: var(--inova-blue); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: var(--inova-green); color: white; padding: 12px; text-align: left; font-size: 13px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; font-size: 14px; outline: none; }
+        .low-stock { background-color: var(--danger) !important; color: white; border-radius: 3px; padding: 3px 6px; font-weight: bold; }
+        .total-val { font-weight: bold; color: var(--inova-blue); }
+        .obs-field { font-style: italic; color: #555; min-width: 250px; }
+        .editable { border-bottom: 1px dashed #ccc; cursor: cell; }
+        #loading { display: none; font-weight: bold; color: var(--inova-green); animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.3;} 100% {opacity: 1;} }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1 style="margin:0; color: var(--inova-green);">Inova Informática</h1>
+            <small>Controle de Estoque e Movimentação de Obras</small>
+        </div>
+        <button class="btn btn-save" onclick="pushData()">☁️ SALVAR NA PLANILHA ONLINE</button>
+    </header>
+
+    <div class="status-bar">
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="🔍 Pesquisar código, obra, cabo ou observação..." style="flex-grow:1; padding:10px; border:1px solid #ccc; border-radius:5px;">
+        <button class="btn btn-add" onclick="addRow()">+ Novo Item</button>
+        <span id="loading">SINCRONIZANDO...</span>
+    </div>
+
+    <table id="stockTable">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Produto / Descrição</th>
+                <th>Marca</th>
+                <th>Custo (R$)</th>
+                <th>Lances (Pedaços)</th>
+                <th>Estoque Total</th>
+                <th>Valor Total</th>
+                <th>Mín.</th>
+                <th>Status / Empréstimos (Obras)</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // SEU LINK GERADO NO GOOGLE APPS SCRIPT
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxNDiq_7LmHG7eHaTQAIVNrYeNCIZ-L3n2dnQvU0nAK4awiQ4sc4NKaoJAqmslnao4L/exec";
+
+    // Carrega os dados assim que abre o arquivo
+    async function pullData() {
+        showLoading(true);
+        try {
+            const response = await fetch(WEB_APP_URL + "?action=read");
+            const data = await response.json();
+            const tbody = document.querySelector("#stockTable tbody");
+            tbody.innerHTML = "";
+            data.forEach(item => insertRow(item[0], item[1], item[2], item[3], item[4], item[5], item[6]));
+            calc();
+        } catch (e) {
+            console.log("Iniciando com tabela vazia.");
+            addRow();
+        }
+        showLoading(false);
+    }
+
+    // Envia os dados para a planilha
+    async function pushData() {
+        showLoading(true);
+        const rows = document.querySelectorAll("#stockTable tbody tr");
+        const data = Array.from(rows).map(row => [
+            row.cells[0].innerText,
+            row.cells[1].innerText,
+            row.cells[2].innerText,
+            row.cells[3].innerText,
+            row.cells[4].innerText,
+            row.cells[7].innerText,
+            row.cells[8].innerText // Observação / Obra
+        ]);
+
+        try {
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify(data)
+            });
+            alert("✅ SUCESSO! Dados salvos na Planilha Google da Inova.");
+        } catch (e) {
+            alert("❌ ERRO ao salvar. Verifique sua conexão.");
+        }
+        showLoading(false);
+    }
+
+    function insertRow(cod, prod, marca, custo, lances, min, obs) {
+        const tbody = document.querySelector("#stockTable tbody");
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td contenteditable="true" class="editable">${cod || '0000'}</td>
+            <td contenteditable="true" class="editable">${prod || 'Novo Cabo'}</td>
+            <td contenteditable="true" class="editable">${marca || 'Marca'}</td>
+            <td contenteditable="true" class="editable" oninput="calc()">${custo || '0,00'}</td>
+            <td contenteditable="true" class="editable" oninput="parseLances(this)">${lances || '0'}</td>
+            <td class="total-qty" style="font-weight:bold">0</td>
+            <td class="total-val">R$ 0,00</td>
+            <td contenteditable="true" class="editable" oninput="calc()">${min || '20'}</td>
+            <td contenteditable="true" class="editable obs-field">${obs || 'Disponível no estoque'}</td>
+            <td><button onclick="this.parentElement.parentElement.remove(); calc()" style="cursor:pointer; border:none; background:none;">🗑️</button></td>
+        `;
+        parseLances(row.cells[4]);
+    }
+
+    function addRow() { insertRow(); }
+
+    function parseLances(cell) {
+        const row = cell.parentElement;
+        const partes = cell.innerText.split('+').map(n => parseFloat(n.trim().replace(',', '.')) || 0);
+        const soma = partes.reduce((a, b) => a + b, 0);
+        row.querySelector('.total-qty').innerText = soma;
+        calc();
+    }
+
+    function calc() {
+        document.querySelectorAll("#stockTable tbody tr").forEach(row => {
+            const custo = parseFloat(row.cells[3].innerText.replace(',', '.')) || 0;
+            const estoque = parseFloat(row.querySelector('.total-qty').innerText) || 0;
+            const minimo = parseFloat(row.cells[7].innerText) || 0;
+            row.querySelector('.total-val').innerText = "R$ " + (custo * estoque).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            if (estoque < minimo) row.querySelector('.total-qty').classList.add("low-stock");
+            else row.querySelector('.total-qty').classList.remove("low-stock");
+        });
+    }
+
+    function showLoading(val) { document.getElementById('loading').style.display = val ? 'inline' : 'none'; }
+
+    function filterTable() {
+        let input = document.getElementById("searchInput").value.toUpperCase();
+        let tr = document.getElementById("stockTable").getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            tr[i].style.display = tr[i].textContent.toUpperCase().indexOf(input) > -1 ? "" : "none";
+        }
+    }
+
+    pullData(); // Inicia carregando o que já existe na nuvem
+</script>
+
+</body>
+</html>
