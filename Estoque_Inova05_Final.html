@@ -5,7 +5,6 @@
 <title>Inova Cloud Stock</title>
 
 <style>
-
 :root{
 --verde:#008d4c;
 --azul:#0056b3;
@@ -84,38 +83,43 @@ display:none;
 font-weight:bold;
 color:var(--verde);
 }
-
 </style>
-
 </head>
+
 <body>
+
+<!-- LOGIN -->
+<div id="loginBox">
+<input id="user" placeholder="Usuário">
+<input id="pass" type="password" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
 
 <div class="container">
 
 <header>
-
 <div>
 <h2 style="margin:0;color:#008d4c">Inova Informática</h2>
 <small>Sistema de Estoque</small>
 </div>
 
 <div>
+<button class="btn" onclick="mostrarEstoque()">📦 Estoque</button>
+<button class="btn" onclick="mostrarHistorico()">📊 Histórico</button>
 <button class="btn btn-add" onclick="addRow()">+ Item</button>
 <button class="btn btn-save" onclick="pushData()">☁️ Salvar</button>
 </div>
-
 </header>
 
-<input type="text" id="search" placeholder="Pesquisar..."
-style="width:100%;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:5px"
-onkeyup="filterTable()">
+<input type="text" id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
 
 <span id="loading">Sincronizando...</span>
 
 <table id="table">
-
 <thead>
-
 <tr>
 <th>Código</th>
 <th>Produto</th>
@@ -128,28 +132,116 @@ onkeyup="filterTable()">
 <th>Status</th>
 <th></th>
 </tr>
-
 </thead>
-
 <tbody></tbody>
-
 </table>
 
+<!-- HISTÓRICO -->
+<div id="historicoBox" style="display:none;">
+<h3>Histórico</h3>
+<table>
+<thead>
+<tr>
+<th>Usuário</th>
+<th>Ação</th>
+<th>Detalhe</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody id="historicoTabela"></tbody>
+</table>
+</div>
+
+</div>
 </div>
 
 <script>
 
-const WEB_APP_URL="https://script.google.com/macros/s/AKfycbyYqJqcl9WqJuNINX8TS2BA0lxwU2Wfi_sK7n748vomgtpNzeuNkgIPI5WQcIwOQfjM/exec";
+const WEB_APP_URL="COLE_SUA_URL_AQUI";
+
+let usuarioLogado=null;
+
+const usuarios=[
+{user:"sandro",senha:"123",tipo:"admin"},
+{user:"func1",senha:"123",tipo:"view"}
+];
+
+let historico=[];
+
+function login(){
+const u=user.value;
+const s=pass.value;
+
+const userFind=usuarios.find(x=>x.user==u && x.senha==s);
+
+if(!userFind){alert("Erro login");return;}
+
+usuarioLogado=userFind;
+
+loginBox.style.display="none";
+app.style.display="block";
+
+aplicarPermissoes();
+pullData();
+}
+
+function podeEditar(){
+return usuarioLogado && usuarioLogado.tipo==="admin";
+}
+
+function aplicarPermissoes(){
+if(podeEditar()) return;
+
+document.querySelectorAll("[contenteditable]").forEach(el=>{
+el.contentEditable="false";
+el.style.background="#eee";
+});
+
+document.querySelectorAll("button").forEach(btn=>{
+if(btn.innerText.includes("Salvar")||btn.innerText.includes("Item"))
+btn.style.display="none";
+});
+}
+
+function registrarAcao(a,d){
+if(!usuarioLogado) return;
+
+historico.push({
+user:usuarioLogado.user,
+acao:a,
+detalhe:d,
+data:new Date().toLocaleString()
+});
+}
+
+function mostrarHistorico(){
+table.style.display="none";
+historicoBox.style.display="block";
+renderHistorico();
+}
+
+function mostrarEstoque(){
+table.style.display="table";
+historicoBox.style.display="none";
+}
+
+function renderHistorico(){
+const tbody=document.getElementById("historicoTabela");
+tbody.innerHTML="";
+
+historico.slice().reverse().forEach(h=>{
+const tr=document.createElement("tr");
+tr.innerHTML=`<td>${h.user}</td><td>${h.acao}</td><td>${h.detalhe}</td><td>${h.data}</td>`;
+tbody.appendChild(tr);
+});
+}
 
 function showLoading(v){
-document.getElementById("loading").style.display=v?"inline":"none";
+loading.style.display=v?"inline":"none";
 }
 
 async function pullData(){
-
 showLoading(true);
-
-try{
 
 const r=await fetch(WEB_APP_URL+"?action=ler");
 const data=await r.json();
@@ -162,18 +254,16 @@ insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
 });
 
 calc();
-
-}catch(e){
-
-addRow();
-
-}
-
 showLoading(false);
-
 }
 
 async function pushData(){
+
+if(!podeEditar()){
+alert("Sem permissão");
+registrarAcao("Tentou salvar","Bloqueado");
+return;
+}
 
 showLoading(true);
 
@@ -189,123 +279,85 @@ r.cells[7].innerText,
 r.cells[8].innerText
 ]);
 
-try{
-
 await fetch(WEB_APP_URL,{
 method:"POST",
 mode:"no-cors",
 body:JSON.stringify({dados:data})
 });
 
-alert("Estoque salvo com sucesso");
+registrarAcao("Salvou estoque","OK");
 
-}catch(e){
-
-alert("Erro ao salvar");
-
-}
+alert("Salvo");
 
 showLoading(false);
-
 }
 
 function insertRow(c,p,m,custo,l,min,obs){
 
-const tbody=document.querySelector("#table tbody");
-
-const r=tbody.insertRow();
+const r=document.querySelector("#table tbody").insertRow();
 
 r.innerHTML=`
-
-<td contenteditable class="editable">${c||""}</td>
-
-<td contenteditable class="editable">${p||""}</td>
-
-<td contenteditable class="editable">${m||""}</td>
-
-<td contenteditable class="editable" oninput="calc()">${custo||0}</td>
-
-<td contenteditable class="editable" oninput="parseLances(this)">${l||0}</td>
-
+<td contenteditable onblur="registrarAcao('Editou código',this.innerText)">${c||""}</td>
+<td contenteditable onblur="registrarAcao('Editou produto',this.innerText)">${p||""}</td>
+<td contenteditable>${m||""}</td>
+<td contenteditable oninput="calc()">${custo||0}</td>
+<td contenteditable oninput="parseLances(this)">${l||0}</td>
 <td class="qtd">0</td>
-
 <td class="val">0</td>
-
-<td contenteditable class="editable" oninput="calc()">${min||10}</td>
-
-<td contenteditable class="editable">${obs||""}</td>
-
-<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
-
+<td contenteditable>${min||10}</td>
+<td contenteditable>${obs||""}</td>
+<td><button onclick="removerLinha(this)">🗑️</button></td>
 `;
 
 parseLances(r.cells[4]);
-
 }
 
-function addRow(){
-insertRow();
+function removerLinha(btn){
+
+if(!podeEditar()){
+alert("Sem permissão");
+registrarAcao("Tentou excluir","Bloqueado");
+return;
+}
+
+registrarAcao("Excluiu item","OK");
+
+btn.parentElement.parentElement.remove();
+calc();
 }
 
 function parseLances(c){
-
 const r=c.parentElement;
-
-const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
-
-const total=parts.reduce((a,b)=>a+b,0);
-
+const total=c.innerText.split("+").map(n=>parseFloat(n)||0).reduce((a,b)=>a+b,0);
 r.querySelector(".qtd").innerText=total;
-
 calc();
-
 }
 
 function calc(){
-
 document.querySelectorAll("#table tbody tr").forEach(r=>{
-
-let custoTexto=r.cells[3].innerText.trim();
-
-custoTexto=custoTexto.replace(",","."); 
-
-const custo=parseFloat(custoTexto)||0;
-
+const custo=parseFloat(r.cells[3].innerText)||0;
 const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
-
 const min=parseFloat(r.cells[7].innerText)||0;
-
 const valor=custo*metros;
 
-r.querySelector(".val").innerText=
-valor.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+r.querySelector(".val").innerText=valor.toFixed(2);
 
 if(metros<min)
 r.querySelector(".qtd").classList.add("low");
 else
 r.querySelector(".qtd").classList.remove("low");
-
 });
-
 }
 
 function filterTable(){
-
-const v=document.getElementById("search").value.toUpperCase();
-
+const v=search.value.toUpperCase();
 document.querySelectorAll("#table tbody tr").forEach(tr=>{
-
 tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
-
 });
-
 }
-
-pullData();
 
 </script>
 
 </body>
 </html>
-
 
