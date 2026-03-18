@@ -7,17 +7,56 @@
 <style>
 
 body{
+margin:0;
 font-family:Segoe UI;
-background:#f4f7f6;
-padding:20px;
 }
 
+/* LOGIN */
+#loginTela{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:url('https://images.unsplash.com/photo-1581091215367-59ab6b6b5c5b') no-repeat center;
+background-size:cover;
+}
+
+.login-box{
+background:rgba(0,0,0,0.75);
+padding:40px;
+border-radius:12px;
+text-align:center;
+color:white;
+width:320px;
+}
+
+.login-box h2{color:#00c37a}
+
+.login-box input{
+width:100%;
+padding:10px;
+margin:8px 0;
+border:none;
+border-radius:5px;
+}
+
+.login-box button{
+width:100%;
+padding:10px;
+background:#00c37a;
+border:none;
+border-radius:5px;
+color:white;
+cursor:pointer;
+}
+
+/* SISTEMA */
+#app{display:none;padding:20px;background:#f4f7f6;height:100vh}
+
 .container{
-max-width:1400px;
-margin:auto;
 background:white;
-border-radius:10px;
 padding:20px;
+border-radius:10px;
 }
 
 header{
@@ -25,19 +64,17 @@ display:flex;
 justify-content:space-between;
 align-items:center;
 border-bottom:3px solid #008d4c;
-margin-bottom:20px;
 }
 
 h2{color:#008d4c;margin:0}
 
 .top-buttons button{
-padding:10px 15px;
+padding:10px;
 margin-left:5px;
 border:none;
 border-radius:5px;
-cursor:pointer;
-font-weight:bold;
 color:white;
+cursor:pointer;
 }
 
 .btn-estoque{background:#008d4c}
@@ -47,43 +84,39 @@ color:white;
 
 #search{
 width:100%;
-padding:10px;
+padding:12px;
 margin:10px 0;
-border-radius:5px;
-border:1px solid #ccc;
 }
 
-table{
-width:100%;
-border-collapse:collapse;
-}
-
-th{
-background:#008d4c;
-color:white;
-padding:10px;
-}
-
-td{
-padding:8px;
-border-bottom:1px solid #ddd;
-}
-
-.low{
-background:#d9534f;
-color:white;
-padding:3px;
-border-radius:4px;
-}
+table{width:100%;border-collapse:collapse}
+th{background:#008d4c;color:white;padding:10px}
+td{padding:8px;border-bottom:1px solid #ddd}
 
 .hidden{display:none}
+.low{background:red;color:white;padding:3px}
 
 </style>
-
 </head>
 
 <body>
 
+<!-- LOGIN -->
+<div id="loginTela">
+<div class="login-box">
+
+<h2>Inova Informática</h2>
+<p>Sistema de Estoque</p>
+
+<input type="text" id="user" placeholder="Usuário">
+<input type="password" id="pass" placeholder="Senha">
+
+<button onclick="login()">Entrar</button>
+
+</div>
+</div>
+
+<!-- SISTEMA -->
+<div id="app">
 <div class="container">
 
 <header>
@@ -104,7 +137,6 @@ border-radius:4px;
 
 <input type="text" id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
 
-<!-- ESTOQUE -->
 <div id="estoqueView">
 <table id="table">
 <thead>
@@ -118,31 +150,53 @@ border-radius:4px;
 </table>
 </div>
 
-<!-- HISTÓRICO -->
 <div id="historicoView" class="hidden">
-<h3>Histórico de Salvamentos</h3>
+<h3>Histórico</h3>
 <table>
-<thead>
-<tr><th>Data</th><th>Itens</th></tr>
-</thead>
+<thead><tr><th>Data</th><th>Itens</th></tr></thead>
 <tbody id="histBody"></tbody>
 </table>
 </div>
 
+</div>
 </div>
 
 <script>
 
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
+/* LOGIN */
+const usuarios=[
+{user:"sandro",senha:"123"},
+{user:"func1",senha:"123"}
+];
+
+function login(){
+
+const u=document.getElementById("user").value;
+const p=document.getElementById("pass").value;
+
+const ok=usuarios.find(x=>x.user==u && x.senha==p);
+
+if(ok){
+document.getElementById("loginTela").style.display="none";
+document.getElementById("app").style.display="block";
+pullData();
+}else{
+alert("Login inválido");
+}
+
+}
+
+/* SISTEMA */
 function showEstoque(){
-document.getElementById("estoqueView").classList.remove("hidden");
-document.getElementById("historicoView").classList.add("hidden");
+estoqueView.classList.remove("hidden");
+historicoView.classList.add("hidden");
 }
 
 function showHistorico(){
-document.getElementById("estoqueView").classList.add("hidden");
-document.getElementById("historicoView").classList.remove("hidden");
+estoqueView.classList.add("hidden");
+historicoView.classList.remove("hidden");
 loadHistorico();
 }
 
@@ -150,11 +204,10 @@ async function loadHistorico(){
 const r=await fetch(WEB_APP_URL+"?action=historico");
 const data=await r.json();
 
-const body=document.getElementById("histBody");
-body.innerHTML="";
+histBody.innerHTML="";
 
 data.forEach(i=>{
-body.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
+histBody.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
 });
 }
 
@@ -251,8 +304,6 @@ document.querySelectorAll("#table tbody tr").forEach(tr=>{
 tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
 }
-
-pullData();
 
 </script>
 
