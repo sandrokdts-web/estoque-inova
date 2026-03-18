@@ -5,11 +5,7 @@
 <title>Inova Estoque</title>
 
 <style>
-
-body{
-margin:0;
-font-family:Segoe UI;
-}
+body{margin:0;font-family:Segoe UI}
 
 /* LOGIN */
 #loginTela{
@@ -17,12 +13,12 @@ height:100vh;
 display:flex;
 justify-content:center;
 align-items:center;
-background:url('https://images.unsplash.com/photo-1581091215367-59ab6b6b5c5b') no-repeat center;
+background:#1e1e1e;
 background-size:cover;
 }
 
 .login-box{
-background:rgba(0,0,0,0.75);
+background:rgba(0,0,0,0.8);
 padding:40px;
 border-radius:12px;
 text-align:center;
@@ -48,6 +44,11 @@ border:none;
 border-radius:5px;
 color:white;
 cursor:pointer;
+}
+
+.login-box input[type=file]{
+background:white;
+color:black;
 }
 
 /* SISTEMA */
@@ -94,7 +95,6 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 .hidden{display:none}
 .low{background:red;color:white;padding:3px}
-
 </style>
 </head>
 
@@ -106,6 +106,8 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 <h2>Inova Informática</h2>
 <p>Sistema de Estoque</p>
+
+<input type="file" accept="image/*" onchange="trocarFundo(event)">
 
 <input type="text" id="user" placeholder="Usuário">
 <input type="password" id="pass" placeholder="Senha">
@@ -165,26 +167,70 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
+/* FUNDO */
+function trocarFundo(e){
+const file=e.target.files[0];
+if(!file) return;
+
+const reader=new FileReader();
+reader.onload=function(ev){
+loginTela.style.background=`url(${ev.target.result}) center/cover`;
+}
+reader.readAsDataURL(file);
+}
+
 /* LOGIN */
+let tipoUsuario="";
+
 const usuarios=[
-{user:"sandro",senha:"123"},
-{user:"func1",senha:"123"}
+{user:"sandro",senha:"123",tipo:"admin"},
+{user:"func1",senha:"",tipo:"view"}
 ];
 
 function login(){
 
-const u=document.getElementById("user").value;
-const p=document.getElementById("pass").value;
+const u=user.value;
+const p=pass.value;
+
+// entra direto como funcionário
+if(u==="" && p===""){
+tipoUsuario="view";
+entrar();
+return;
+}
 
 const ok=usuarios.find(x=>x.user==u && x.senha==p);
 
 if(ok){
-document.getElementById("loginTela").style.display="none";
-document.getElementById("app").style.display="block";
-pullData();
+tipoUsuario=ok.tipo;
+entrar();
 }else{
 alert("Login inválido");
 }
+}
+
+function entrar(){
+
+loginTela.style.display="none";
+app.style.display="block";
+
+if(tipoUsuario==="view"){
+bloquearEdicao();
+}
+
+pullData();
+}
+
+/* BLOQUEIO */
+function bloquearEdicao(){
+
+document.querySelectorAll("[contenteditable]").forEach(e=>{
+e.setAttribute("contenteditable","false");
+});
+
+document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
+b.style.display="none";
+});
 
 }
 
@@ -205,7 +251,6 @@ const r=await fetch(WEB_APP_URL+"?action=historico");
 const data=await r.json();
 
 histBody.innerHTML="";
-
 data.forEach(i=>{
 histBody.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
 });
@@ -299,7 +344,7 @@ r.querySelector(".qtd").classList.remove("low");
 }
 
 function filterTable(){
-const v=document.getElementById("search").value.toUpperCase();
+const v=search.value.toUpperCase();
 document.querySelectorAll("#table tbody tr").forEach(tr=>{
 tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
