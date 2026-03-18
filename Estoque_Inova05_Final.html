@@ -1,20 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Inova Cloud Stock</title>
+<title>Inova Estoque</title>
 
 <style>
-:root{
---verde:#008d4c;
---azul:#0056b3;
---bg:#f4f7f6;
---danger:#d9534f;
-}
 
 body{
 font-family:Segoe UI;
-background:var(--bg);
+background:#f4f7f6;
 padding:20px;
 }
 
@@ -23,7 +18,6 @@ max-width:1400px;
 margin:auto;
 background:white;
 border-radius:10px;
-box-shadow:0 4px 15px rgba(0,0,0,0.1);
 padding:20px;
 }
 
@@ -31,13 +25,15 @@ header{
 display:flex;
 justify-content:space-between;
 align-items:center;
-border-bottom:3px solid var(--verde);
+border-bottom:3px solid #008d4c;
 margin-bottom:20px;
-padding-bottom:10px;
 }
 
-.btn{
-padding:10px 20px;
+h2{color:#008d4c;margin:0}
+
+.top-buttons button{
+padding:10px 15px;
+margin-left:5px;
 border:none;
 border-radius:5px;
 cursor:pointer;
@@ -45,8 +41,18 @@ font-weight:bold;
 color:white;
 }
 
-.btn-save{background:var(--verde)}
-.btn-add{background:var(--azul)}
+.btn-estoque{background:#008d4c}
+.btn-historico{background:#6c757d}
+.btn-add{background:#0056b3}
+.btn-save{background:#28a745}
+
+#search{
+width:100%;
+padding:10px;
+margin:10px 0;
+border-radius:5px;
+border:1px solid #ccc;
+}
 
 table{
 width:100%;
@@ -54,11 +60,9 @@ border-collapse:collapse;
 }
 
 th{
-background:var(--verde);
+background:#008d4c;
 color:white;
 padding:10px;
-font-size:13px;
-text-align:left;
 }
 
 td{
@@ -66,183 +70,96 @@ padding:8px;
 border-bottom:1px solid #ddd;
 }
 
-.editable{
-border-bottom:1px dashed #ccc;
-}
-
 .low{
-background:var(--danger);
+background:#d9534f;
 color:white;
-padding:2px 6px;
-border-radius:3px;
-font-weight:bold;
+padding:3px;
+border-radius:4px;
 }
 
-#loading{
-display:none;
-font-weight:bold;
-color:var(--verde);
-}
+.hidden{display:none}
+
 </style>
+
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div id="loginBox">
-<input id="user" placeholder="Usuário">
-<input id="pass" type="password" placeholder="Senha">
-<button onclick="login()">Entrar</button>
-</div>
-
-<!-- APP -->
-<div id="app" style="display:none;">
-
 <div class="container">
 
 <header>
+
 <div>
-<h2 style="margin:0;color:#008d4c">Inova Informática</h2>
+<h2>Inova Informática</h2>
 <small>Sistema de Estoque</small>
 </div>
 
-<div>
-<button class="btn" onclick="mostrarEstoque()">📦 Estoque</button>
-<button class="btn" onclick="mostrarHistorico()">📊 Histórico</button>
-<button class="btn btn-add" onclick="addRow()">+ Item</button>
-<button class="btn btn-save" onclick="pushData()">☁️ Salvar</button>
+<div class="top-buttons">
+<button class="btn-estoque" onclick="showEstoque()">📦 Estoque</button>
+<button class="btn-historico" onclick="showHistorico()">📊 Histórico</button>
+<button class="btn-add" onclick="addRow()">+ Item</button>
+<button class="btn-save" onclick="pushData()">Salvar</button>
 </div>
+
 </header>
 
 <input type="text" id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
 
-<span id="loading">Sincronizando...</span>
-
+<!-- ESTOQUE -->
+<div id="estoqueView">
 <table id="table">
 <thead>
 <tr>
-<th>Código</th>
-<th>Produto</th>
-<th>Marca</th>
-<th>Custo</th>
-<th>Lances</th>
-<th>Total</th>
-<th>Valor</th>
-<th>Mín</th>
-<th>Status</th>
-<th></th>
+<th>Código</th><th>Produto</th><th>Marca</th>
+<th>Custo</th><th>Lances</th><th>Total</th>
+<th>Valor</th><th>Mín</th><th>Status</th><th></th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
+</div>
 
 <!-- HISTÓRICO -->
-<div id="historicoBox" style="display:none;">
-<h3>Histórico</h3>
+<div id="historicoView" class="hidden">
+<h3>Histórico de Salvamentos</h3>
 <table>
 <thead>
-<tr>
-<th>Usuário</th>
-<th>Ação</th>
-<th>Detalhe</th>
-<th>Data</th>
-</tr>
+<tr><th>Data</th><th>Itens</th></tr>
 </thead>
-<tbody id="historicoTabela"></tbody>
+<tbody id="histBody"></tbody>
 </table>
 </div>
 
-</div>
 </div>
 
 <script>
 
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
-let usuarioLogado=null;
-
-const usuarios=[
-{user:"sandro",senha:"123",tipo:"admin"},
-{user:"func1",senha:"123",tipo:"view"}
-];
-
-let historico=[];
-
-function login(){
-const u=user.value;
-const s=pass.value;
-
-const userFind=usuarios.find(x=>x.user==u && x.senha==s);
-
-if(!userFind){alert("Erro login");return;}
-
-usuarioLogado=userFind;
-
-loginBox.style.display="none";
-app.style.display="block";
-
-aplicarPermissoes();
-pullData();
+function showEstoque(){
+document.getElementById("estoqueView").classList.remove("hidden");
+document.getElementById("historicoView").classList.add("hidden");
 }
 
-function podeEditar(){
-return usuarioLogado && usuarioLogado.tipo==="admin";
+function showHistorico(){
+document.getElementById("estoqueView").classList.add("hidden");
+document.getElementById("historicoView").classList.remove("hidden");
+loadHistorico();
 }
 
-function aplicarPermissoes(){
-if(podeEditar()) return;
+async function loadHistorico(){
+const r=await fetch(WEB_APP_URL+"?action=historico");
+const data=await r.json();
 
-document.querySelectorAll("[contenteditable]").forEach(el=>{
-el.contentEditable="false";
-el.style.background="#eee";
+const body=document.getElementById("histBody");
+body.innerHTML="";
+
+data.forEach(i=>{
+body.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
 });
-
-document.querySelectorAll("button").forEach(btn=>{
-if(btn.innerText.includes("Salvar")||btn.innerText.includes("Item"))
-btn.style.display="none";
-});
-}
-
-function registrarAcao(a,d){
-if(!usuarioLogado) return;
-
-historico.push({
-user:usuarioLogado.user,
-acao:a,
-detalhe:d,
-data:new Date().toLocaleString()
-});
-}
-
-function mostrarHistorico(){
-table.style.display="none";
-historicoBox.style.display="block";
-renderHistorico();
-}
-
-function mostrarEstoque(){
-table.style.display="table";
-historicoBox.style.display="none";
-}
-
-function renderHistorico(){
-const tbody=document.getElementById("historicoTabela");
-tbody.innerHTML="";
-
-historico.slice().reverse().forEach(h=>{
-const tr=document.createElement("tr");
-tr.innerHTML=`<td>${h.user}</td><td>${h.acao}</td><td>${h.detalhe}</td><td>${h.data}</td>`;
-tbody.appendChild(tr);
-});
-}
-
-function showLoading(v){
-loading.style.display=v?"inline":"none";
 }
 
 async function pullData(){
-showLoading(true);
-
 const r=await fetch(WEB_APP_URL+"?action=ler");
 const data=await r.json();
 
@@ -252,20 +169,9 @@ tbody.innerHTML="";
 data.forEach(i=>{
 insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
 });
-
-calc();
-showLoading(false);
 }
 
 async function pushData(){
-
-if(!podeEditar()){
-alert("Sem permissão");
-registrarAcao("Tentou salvar","Bloqueado");
-return;
-}
-
-showLoading(true);
 
 const rows=document.querySelectorAll("#table tbody tr");
 
@@ -285,59 +191,49 @@ mode:"no-cors",
 body:JSON.stringify({dados:data})
 });
 
-registrarAcao("Salvou estoque","OK");
-
-alert("Salvo");
-
-showLoading(false);
+alert("Salvo com sucesso");
 }
 
 function insertRow(c,p,m,custo,l,min,obs){
 
-const r=document.querySelector("#table tbody").insertRow();
+const tbody=document.querySelector("#table tbody");
+
+const r=tbody.insertRow();
 
 r.innerHTML=`
-<td contenteditable onblur="registrarAcao('Editou código',this.innerText)">${c||""}</td>
-<td contenteditable onblur="registrarAcao('Editou produto',this.innerText)">${p||""}</td>
+<td contenteditable>${c||""}</td>
+<td contenteditable>${p||""}</td>
 <td contenteditable>${m||""}</td>
 <td contenteditable oninput="calc()">${custo||0}</td>
 <td contenteditable oninput="parseLances(this)">${l||0}</td>
 <td class="qtd">0</td>
 <td class="val">0</td>
-<td contenteditable>${min||10}</td>
+<td contenteditable oninput="calc()">${min||10}</td>
 <td contenteditable>${obs||""}</td>
-<td><button onclick="removerLinha(this)">🗑️</button></td>
+<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
 `;
 
 parseLances(r.cells[4]);
 }
 
-function removerLinha(btn){
-
-if(!podeEditar()){
-alert("Sem permissão");
-registrarAcao("Tentou excluir","Bloqueado");
-return;
-}
-
-registrarAcao("Excluiu item","OK");
-
-btn.parentElement.parentElement.remove();
-calc();
-}
+function addRow(){insertRow();}
 
 function parseLances(c){
 const r=c.parentElement;
-const total=c.innerText.split("+").map(n=>parseFloat(n)||0).reduce((a,b)=>a+b,0);
+const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
+const total=parts.reduce((a,b)=>a+b,0);
 r.querySelector(".qtd").innerText=total;
 calc();
 }
 
 function calc(){
+
 document.querySelectorAll("#table tbody tr").forEach(r=>{
+
 const custo=parseFloat(r.cells[3].innerText)||0;
 const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
 const min=parseFloat(r.cells[7].innerText)||0;
+
 const valor=custo*metros;
 
 r.querySelector(".val").innerText=valor.toFixed(2);
@@ -346,18 +242,20 @@ if(metros<min)
 r.querySelector(".qtd").classList.add("low");
 else
 r.querySelector(".qtd").classList.remove("low");
+
 });
 }
 
 function filterTable(){
-const v=search.value.toUpperCase();
+const v=document.getElementById("search").value.toUpperCase();
 document.querySelectorAll("#table tbody tr").forEach(tr=>{
 tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
 }
 
+pullData();
+
 </script>
 
 </body>
 </html>
-
