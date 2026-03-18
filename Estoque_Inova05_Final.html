@@ -44,11 +44,7 @@ border:none;
 border-radius:5px;
 color:white;
 cursor:pointer;
-}
-
-.login-box input[type=file]{
-background:white;
-color:black;
+margin-top:5px;
 }
 
 /* SISTEMA */
@@ -107,8 +103,6 @@ td{padding:8px;border-bottom:1px solid #ddd}
 <h2>Inova Informática</h2>
 <p>Sistema de Estoque</p>
 
-<input type="file" accept="image/*" onchange="trocarFundo(event)">
-
 <input type="text" id="user" placeholder="Usuário">
 <input type="password" id="pass" placeholder="Senha">
 
@@ -133,6 +127,11 @@ td{padding:8px;border-bottom:1px solid #ddd}
 <button class="btn-historico" onclick="showHistorico()">📊 Histórico</button>
 <button class="btn-add" onclick="addRow()">+ Item</button>
 <button class="btn-save" onclick="pushData()">Salvar</button>
+
+<!-- 🔥 botão só admin -->
+<button id="btnBg" onclick="bgInput.click()">🖼️ Fundo</button>
+<input type="file" id="bgInput" accept="image/*" onchange="trocarFundo(event)" style="display:none">
+
 </div>
 
 </header>
@@ -165,26 +164,21 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 <script>
 
-const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
+const WEB_APP_URL="COLE_SEU_LINK_APPS_SCRIPT_AQUI";
 
-/* FUNDO */
-function trocarFundo(e){
-const file=e.target.files[0];
-if(!file) return;
-
-const reader=new FileReader();
-reader.onload=function(ev){
-loginTela.style.background=`url(${ev.target.result}) center/cover`;
+/* 🔥 CARREGA FUNDO SALVO */
+window.onload=function(){
+const img=localStorage.getItem("fundoInova");
+if(img){
+loginTela.style.background=`url(${img}) center/cover`;
 }
-reader.readAsDataURL(file);
 }
 
 /* LOGIN */
 let tipoUsuario="";
 
 const usuarios=[
-{user:"sandro",senha:"123",tipo:"admin"},
-{user:"func1",senha:"",tipo:"view"}
+{user:"sandro",senha:"123",tipo:"admin"}
 ];
 
 function login(){
@@ -192,7 +186,7 @@ function login(){
 const u=user.value;
 const p=pass.value;
 
-// entra direto como funcionário
+// funcionário entra direto
 if(u==="" && p===""){
 tipoUsuario="view";
 entrar();
@@ -214,8 +208,10 @@ function entrar(){
 loginTela.style.display="none";
 app.style.display="block";
 
+// 🔥 funcionário
 if(tipoUsuario==="view"){
 bloquearEdicao();
+btnBg.style.display="none"; // esconde botão fundo
 }
 
 pullData();
@@ -232,6 +228,28 @@ document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
 b.style.display="none";
 });
 
+}
+
+/* 🔥 TROCAR FUNDO (AGORA SALVA) */
+function trocarFundo(e){
+
+const file=e.target.files[0];
+if(!file) return;
+
+const reader=new FileReader();
+reader.onload=function(ev){
+
+const img=ev.target.result;
+
+// salva
+localStorage.setItem("fundoInova", img);
+
+// aplica
+loginTela.style.background=`url(${img}) center/cover`;
+
+}
+
+reader.readAsDataURL(file);
 }
 
 /* SISTEMA */
