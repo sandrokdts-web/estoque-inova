@@ -4,159 +4,78 @@
 <meta charset="UTF-8">
 <title>Inova Estoque</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{margin:0;font-family:Segoe UI}
-
-/* LOGIN */
-#loginTela{
-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
-background:#1e1e1e;
-background-size:cover;
-}
-
-.login-box{
-background:rgba(0,0,0,0.8);
-padding:40px;
-border-radius:12px;
-text-align:center;
-color:white;
-width:320px;
-}
-
+#loginTela{height:100vh;display:flex;justify-content:center;align-items:center;background:#1e1e1e}
+.login-box{background:rgba(0,0,0,0.8);padding:40px;border-radius:12px;text-align:center;color:white;width:320px}
 .login-box h2{color:#00c37a}
-
-.login-box input{
-width:100%;
-padding:10px;
-margin:8px 0;
-border:none;
-border-radius:5px;
-}
-
-.login-box button{
-width:100%;
-padding:10px;
-background:#00c37a;
-border:none;
-border-radius:5px;
-color:white;
-cursor:pointer;
-margin-top:5px;
-}
-
-/* SISTEMA */
+.login-box input{width:100%;padding:10px;margin:8px 0;border:none;border-radius:5px}
+.login-box button{width:100%;padding:10px;background:#00c37a;border:none;border-radius:5px;color:white;cursor:pointer}
 #app{display:none;padding:20px;background:#f4f7f6;height:100vh}
-
-.container{
-background:white;
-padding:20px;
-border-radius:10px;
-}
-
-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-border-bottom:3px solid #008d4c;
-}
-
-h2{color:#008d4c;margin:0}
-
-.top-buttons button{
-padding:10px;
-margin-left:5px;
-border:none;
-border-radius:5px;
-color:white;
-cursor:pointer;
-}
-
+.container{background:white;padding:20px;border-radius:10px}
+header{display:flex;justify-content:space-between;border-bottom:3px solid #008d4c}
+h2{color:#008d4c}
+.top-buttons button{padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:pointer}
 .btn-estoque{background:#008d4c}
 .btn-historico{background:#6c757d}
 .btn-add{background:#0056b3}
 .btn-save{background:#28a745}
-
-#search{
-width:100%;
-padding:12px;
-margin:10px 0;
-}
-
-table{width:100%;border-collapse:collapse}
-th{background:#008d4c;color:white;padding:10px}
-td{padding:8px;border-bottom:1px solid #ddd}
-
 .hidden{display:none}
-.low{background:red;color:white;padding:3px}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginTela">
 <div class="login-box">
-
 <h2>Inova Informática</h2>
-<p>Sistema de Estoque</p>
-
-<input type="text" id="user" placeholder="Usuário">
-<input type="password" id="pass" placeholder="Senha">
-
+<input id="user"><input id="pass" type="password">
 <button onclick="login()">Entrar</button>
-
 </div>
 </div>
 
-<!-- SISTEMA -->
 <div id="app">
 <div class="container">
 
 <header>
-
-<div>
-<h2>Inova Informática</h2>
-<small>Sistema de Estoque</small>
-</div>
-
+<h2>Sistema</h2>
 <div class="top-buttons">
 <button class="btn-estoque" onclick="showEstoque()">📦 Estoque</button>
 <button class="btn-historico" onclick="showHistorico()">📊 Histórico</button>
-<button class="btn-add" onclick="addRow()">+ Item</button>
-<button class="btn-save" onclick="pushData()">Salvar</button>
-
-<!-- 🔥 botão só admin -->
-<button id="btnBg" onclick="bgInput.click()">🖼️ Fundo</button>
-<input type="file" id="bgInput" accept="image/*" onchange="trocarFundo(event)" style="display:none">
-
+<button onclick="showRacks()" style="background:#ff9800">📦 Racks</button>
 </div>
-
 </header>
 
-<input type="text" id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
-
-<div id="estoqueView">
-<table id="table">
-<thead>
-<tr>
-<th>Código</th><th>Produto</th><th>Marca</th>
-<th>Custo</th><th>Lances</th><th>Total</th>
-<th>Valor</th><th>Mín</th><th>Status</th><th></th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-</div>
+<div id="estoqueView"></div>
 
 <div id="historicoView" class="hidden">
 <h3>Histórico</h3>
-<table>
-<thead><tr><th>Data</th><th>Itens</th></tr></thead>
-<tbody id="histBody"></tbody>
-</table>
+<div id="histBody"></div>
+</div>
+
+<div id="racksView" class="hidden">
+
+<h3>📦 Racks</h3>
+
+<input id="buscaRack" placeholder="Buscar..." onkeyup="buscarRack()">
+<div id="listaRacks"></div>
+
+<h3>➕ Adicionar</h3>
+<input id="codigo" placeholder="Código">
+<input id="modelo" placeholder="Modelo">
+<input id="marca" placeholder="Marca">
+<input id="altura" placeholder="Altura">
+<input id="prof" placeholder="Profundidade">
+<input id="qtd" placeholder="Qtd">
+<input id="custo" placeholder="Custo">
+
+<button onclick="salvarRack()">Salvar</button>
+
+<h3>📊 Dashboard</h3>
+<canvas id="graficoRacks"></canvas>
+
 </div>
 
 </div>
@@ -164,207 +83,111 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 <script>
 
-const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
+const WEB_APP_URL="COLE_AQUI_SUA_URL";
 
-/* 🔥 CARREGA FUNDO SALVO */
-window.onload=function(){
-const img=localStorage.getItem("fundoInova");
-if(img){
-loginTela.style.background=`url(${img}) center/cover`;
-}
-}
-
-/* LOGIN */
-let tipoUsuario="";
-
-const usuarios=[
-{user:"sandro",senha:"123",tipo:"admin"}
-];
+let racks=[];
 
 function login(){
-
-const u=user.value;
-const p=pass.value;
-
-// funcionário entra direto
-if(u==="" && p===""){
-tipoUsuario="view";
-entrar();
-return;
-}
-
-const ok=usuarios.find(x=>x.user==u && x.senha==p);
-
-if(ok){
-tipoUsuario=ok.tipo;
-entrar();
-}else{
-alert("Login inválido");
-}
-}
-
-function entrar(){
-
 loginTela.style.display="none";
 app.style.display="block";
-
-// 🔥 funcionário
-if(tipoUsuario==="view"){
-bloquearEdicao();
-btnBg.style.display="none"; // esconde botão fundo
 }
 
-pullData();
-}
-
-/* BLOQUEIO */
-function bloquearEdicao(){
-
-document.querySelectorAll("[contenteditable]").forEach(e=>{
-e.setAttribute("contenteditable","false");
-});
-
-document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
-b.style.display="none";
-});
-
-}
-
-/* 🔥 TROCAR FUNDO (AGORA SALVA) */
-function trocarFundo(e){
-
-const file=e.target.files[0];
-if(!file) return;
-
-const reader=new FileReader();
-reader.onload=function(ev){
-
-const img=ev.target.result;
-
-// salva
-localStorage.setItem("fundoInova", img);
-
-// aplica
-loginTela.style.background=`url(${img}) center/cover`;
-
-}
-
-reader.readAsDataURL(file);
-}
-
-/* SISTEMA */
+// 🔥 TELAS
 function showEstoque(){
 estoqueView.classList.remove("hidden");
 historicoView.classList.add("hidden");
+racksView.classList.add("hidden");
 }
 
 function showHistorico(){
-estoqueView.classList.add("hidden");
 historicoView.classList.remove("hidden");
-loadHistorico();
+estoqueView.classList.add("hidden");
+racksView.classList.add("hidden");
 }
 
-async function loadHistorico(){
-const r=await fetch(WEB_APP_URL+"?action=historico");
-const data=await r.json();
+function showRacks(){
+racksView.classList.remove("hidden");
+historicoView.classList.add("hidden");
+estoqueView.classList.add("hidden");
+carregarRacks();
+}
 
-histBody.innerHTML="";
-data.forEach(i=>{
-histBody.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
+// 🔵 RACKS
+async function carregarRacks(){
+const r=await fetch(WEB_APP_URL+"?action=racks");
+racks=await r.json();
+mostrarRacks(racks);
+gerarGrafico();
+}
+
+function mostrarRacks(lista){
+
+listaRacks.innerHTML="";
+
+lista.forEach(r=>{
+
+let cor="green";
+if(r[7]==0) cor="red";
+else if(r[7]<=2) cor="orange";
+
+listaRacks.innerHTML+=`
+<div style="border:1px solid #ccc;margin:5px;padding:10px">
+<b>${r[1]}</b><br>
+Qtd: <span style="color:${cor}">${r[7]}</span><br>
+
+<a href="https://www.google.com/search?q=${r[1]}" target="_blank">
+🔎 Ver modelo
+</a>
+</div>
+`;
 });
 }
 
-async function pullData(){
-const r=await fetch(WEB_APP_URL+"?action=ler");
-const data=await r.json();
-
-const tbody=document.querySelector("#table tbody");
-tbody.innerHTML="";
-
-data.forEach(i=>{
-insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
-});
+// 🔎 BUSCA
+function buscarRack(){
+const t=buscaRack.value.toLowerCase();
+const f=racks.filter(r=>r[1].toLowerCase().includes(t));
+mostrarRacks(f);
 }
 
-async function pushData(){
-
-const rows=document.querySelectorAll("#table tbody tr");
-
-const data=[...rows].map(r=>[
-r.cells[0].innerText,
-r.cells[1].innerText,
-r.cells[2].innerText,
-r.cells[3].innerText,
-r.cells[4].innerText,
-r.cells[7].innerText,
-r.cells[8].innerText
-]);
+// ➕ SALVAR
+async function salvarRack(){
 
 await fetch(WEB_APP_URL,{
 method:"POST",
 mode:"no-cors",
-body:JSON.stringify({dados:data})
+body:JSON.stringify({
+action:"addRack",
+codigo:codigo.value,
+modelo:modelo.value,
+marca:marca.value,
+altura:altura.value,
+profundidade:prof.value,
+tipo:"Rack",
+estado:"Novo",
+quantidade:qtd.value,
+custo:custo.value,
+status:"Disponível",
+obs:""
+})
 });
 
-alert("Salvo com sucesso");
+alert("Salvo!");
+carregarRacks();
 }
 
-function insertRow(c,p,m,custo,l,min,obs){
+// 📊 GRÁFICO
+function gerarGrafico(){
 
-const tbody=document.querySelector("#table tbody");
+const nomes=racks.map(r=>r[1]);
+const qtd=racks.map(r=>Number(r[7]));
 
-const r=tbody.insertRow();
-
-r.innerHTML=`
-<td contenteditable>${c||""}</td>
-<td contenteditable>${p||""}</td>
-<td contenteditable>${m||""}</td>
-<td contenteditable oninput="calc()">${custo||0}</td>
-<td contenteditable oninput="parseLances(this)">${l||0}</td>
-<td class="qtd">0</td>
-<td class="val">0</td>
-<td contenteditable oninput="calc()">${min||10}</td>
-<td contenteditable>${obs||""}</td>
-<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
-`;
-
-parseLances(r.cells[4]);
+new Chart(graficoRacks,{
+type:"bar",
+data:{
+labels:nomes,
+datasets:[{label:"Estoque",data:qtd}]
 }
-
-function addRow(){insertRow();}
-
-function parseLances(c){
-const r=c.parentElement;
-const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
-const total=parts.reduce((a,b)=>a+b,0);
-r.querySelector(".qtd").innerText=total;
-calc();
-}
-
-function calc(){
-
-document.querySelectorAll("#table tbody tr").forEach(r=>{
-
-const custo=parseFloat(r.cells[3].innerText)||0;
-const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
-const min=parseFloat(r.cells[7].innerText)||0;
-
-const valor=custo*metros;
-
-r.querySelector(".val").innerText=valor.toFixed(2);
-
-if(metros<min)
-r.querySelector(".qtd").classList.add("low");
-else
-r.querySelector(".qtd").classList.remove("low");
-
-});
-}
-
-function filterTable(){
-const v=search.value.toUpperCase();
-document.querySelectorAll("#table tbody tr").forEach(tr=>{
-tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
 }
 
