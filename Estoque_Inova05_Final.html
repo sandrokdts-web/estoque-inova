@@ -16,8 +16,6 @@ body{margin:0;font-family:Segoe UI}
 .container{background:white;padding:20px;border-radius:10px}
 
 header{display:flex;justify-content:space-between;border-bottom:3px solid #008d4c}
-h2{color:#008d4c}
-
 .top-buttons button{padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:pointer}
 .btn-estoque{background:#008d4c}
 .btn-historico{background:#6c757d}
@@ -38,8 +36,10 @@ td{padding:8px;border-bottom:1px solid #ddd}
 <div id="loginTela">
 <div class="login-box">
 <h2>Inova Informática</h2>
-<input id="user"><input id="pass" type="password">
+<input id="user" placeholder="Usuário">
+<input id="pass" type="password" placeholder="Senha">
 <button onclick="login()">Entrar</button>
+<p>Deixe vazio para apenas visualizar</p>
 </div>
 </div>
 
@@ -106,34 +106,63 @@ td{padding:8px;border-bottom:1px solid #ddd}
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
 let racks=[];
+let tipoUsuario="view";
 
+// LOGIN
 function login(){
+
+const u=user.value;
+const p=pass.value;
+
+if(u==="sandro" && p==="123"){
+tipoUsuario="admin";
+entrar();
+return;
+}
+
+if(u==="" && p===""){
+tipoUsuario="view";
+entrar();
+return;
+}
+
+alert("Login inválido");
+}
+
+function entrar(){
 loginTela.style.display="none";
 app.style.display="block";
+
+if(tipoUsuario==="view"){
+bloquearEdicao();
+}
+
 pullData();
 }
 
-function showEstoque(){
-estoqueView.classList.remove("hidden");
-historicoView.classList.add("hidden");
-racksView.classList.add("hidden");
+// BLOQUEIO TOTAL
+function bloquearEdicao(){
+
+document.querySelectorAll("[contenteditable]").forEach(e=>{
+e.setAttribute("contenteditable","false");
+});
+
+document.querySelectorAll("button").forEach(btn=>{
+if(btn.innerText.includes("🗑️")){
+btn.style.display="none";
+}
+});
+
+document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
+b.style.display="none";
+});
+
+document.querySelectorAll("#racksView input, #racksView button").forEach(el=>{
+el.disabled = true;
+});
 }
 
-function showHistorico(){
-historicoView.classList.remove("hidden");
-estoqueView.classList.add("hidden");
-racksView.classList.add("hidden");
-loadHistorico();
-}
-
-function showRacks(){
-racksView.classList.remove("hidden");
-historicoView.classList.add("hidden");
-estoqueView.classList.add("hidden");
-carregarRacks();
-}
-
-// 🔵 ESTOQUE
+// RESTANTE SISTEMA (igual antes)
 async function pullData(){
 const r=await fetch(WEB_APP_URL+"?action=ler");
 const data=await r.json();
@@ -222,7 +251,7 @@ tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
 }
 
-// 🔵 RACKS
+// RACKS
 async function carregarRacks(){
 const r=await fetch(WEB_APP_URL+"?action=racks");
 racks=await r.json();
@@ -231,22 +260,8 @@ mostrarRacks(racks);
 
 function mostrarRacks(lista){
 listaRacks.innerHTML="";
-
 lista.forEach(r=>{
-let cor="green";
-if(r[7]==0) cor="red";
-else if(r[7]<=2) cor="orange";
-
-listaRacks.innerHTML+=`
-<div style="border:1px solid #ccc;margin:5px;padding:10px">
-<b>${r[1]}</b><br>
-Qtd: <span style="color:${cor}">${r[7]}</span><br>
-
-<a href="https://www.google.com/search?q=${r[1]}" target="_blank">
-🔎 Ver modelo
-</a>
-</div>
-`;
+listaRacks.innerHTML+=`<div>${r[1]} - Qtd: ${r[7]}</div>`;
 });
 }
 
@@ -257,7 +272,6 @@ mostrarRacks(f);
 }
 
 async function salvarRack(){
-
 await fetch(WEB_APP_URL,{
 method:"POST",
 mode:"no-cors",
@@ -276,7 +290,6 @@ status:"Disponível",
 obs:""
 })
 });
-
 alert("Rack salvo!");
 carregarRacks();
 }
