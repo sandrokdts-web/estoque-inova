@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <title>Inova Estoque</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;font-family:Segoe UI}
 #loginTela{height:100vh;display:flex;justify-content:center;align-items:center;background:#1e1e1e}
@@ -13,16 +11,25 @@ body{margin:0;font-family:Segoe UI}
 .login-box h2{color:#00c37a}
 .login-box input{width:100%;padding:10px;margin:8px 0;border:none;border-radius:5px}
 .login-box button{width:100%;padding:10px;background:#00c37a;border:none;border-radius:5px;color:white;cursor:pointer}
+
 #app{display:none;padding:20px;background:#f4f7f6;height:100vh}
 .container{background:white;padding:20px;border-radius:10px}
+
 header{display:flex;justify-content:space-between;border-bottom:3px solid #008d4c}
 h2{color:#008d4c}
+
 .top-buttons button{padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:pointer}
 .btn-estoque{background:#008d4c}
 .btn-historico{background:#6c757d}
 .btn-add{background:#0056b3}
 .btn-save{background:#28a745}
+
 .hidden{display:none}
+.low{background:red;color:white;padding:3px}
+
+table{width:100%;border-collapse:collapse}
+th{background:#008d4c;color:white;padding:10px}
+td{padding:8px;border-bottom:1px solid #ddd}
 </style>
 </head>
 
@@ -45,18 +52,35 @@ h2{color:#008d4c}
 <button class="btn-estoque" onclick="showEstoque()">📦 Estoque</button>
 <button class="btn-historico" onclick="showHistorico()">📊 Histórico</button>
 <button onclick="showRacks()" style="background:#ff9800">📦 Racks</button>
+<button class="btn-add" onclick="addRow()">+ Item</button>
+<button class="btn-save" onclick="pushData()">Salvar</button>
 </div>
 </header>
 
-<div id="estoqueView"></div>
+<input id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
+
+<div id="estoqueView">
+<table id="table">
+<thead>
+<tr>
+<th>Código</th><th>Produto</th><th>Marca</th>
+<th>Custo</th><th>Lances</th><th>Total</th>
+<th>Valor</th><th>Mín</th><th>Status</th><th></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
 
 <div id="historicoView" class="hidden">
 <h3>Histórico</h3>
-<div id="histBody"></div>
+<table>
+<thead><tr><th>Data</th><th>Itens</th></tr></thead>
+<tbody id="histBody"></tbody>
+</table>
 </div>
 
 <div id="racksView" class="hidden">
-
 <h3>📦 Racks</h3>
 
 <input id="buscaRack" placeholder="Buscar..." onkeyup="buscarRack()">
@@ -72,10 +96,6 @@ h2{color:#008d4c}
 <input id="custo" placeholder="Custo">
 
 <button onclick="salvarRack()">Salvar</button>
-
-<h3>📊 Dashboard</h3>
-<canvas id="graficoRacks"></canvas>
-
 </div>
 
 </div>
@@ -83,16 +103,16 @@ h2{color:#008d4c}
 
 <script>
 
-const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
+const WEB_APP_URL="https://script.google.com/macros/library/d/1eRi0oA_93zMKriRXiSmEWEl60v-JL0m3hL5yiCXUGeO1grZKKy21j05d/22";
 
 let racks=[];
 
 function login(){
 loginTela.style.display="none";
 app.style.display="block";
+pullData();
 }
 
-// 🔥 TELAS
 function showEstoque(){
 estoqueView.classList.remove("hidden");
 historicoView.classList.add("hidden");
@@ -103,6 +123,7 @@ function showHistorico(){
 historicoView.classList.remove("hidden");
 estoqueView.classList.add("hidden");
 racksView.classList.add("hidden");
+loadHistorico();
 }
 
 function showRacks(){
@@ -112,20 +133,106 @@ estoqueView.classList.add("hidden");
 carregarRacks();
 }
 
+// 🔵 ESTOQUE
+async function pullData(){
+const r=await fetch(WEB_APP_URL+"?action=ler");
+const data=await r.json();
+
+const tbody=document.querySelector("#table tbody");
+tbody.innerHTML="";
+
+data.forEach(i=>{
+insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
+});
+}
+
+async function pushData(){
+const rows=document.querySelectorAll("#table tbody tr");
+
+const data=[...rows].map(r=>[
+r.cells[0].innerText,
+r.cells[1].innerText,
+r.cells[2].innerText,
+r.cells[3].innerText,
+r.cells[4].innerText,
+r.cells[7].innerText,
+r.cells[8].innerText
+]);
+
+await fetch(WEB_APP_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify({dados:data})
+});
+
+alert("Salvo com sucesso");
+}
+
+function insertRow(c,p,m,custo,l,min,obs){
+const tbody=document.querySelector("#table tbody");
+
+const r=tbody.insertRow();
+
+r.innerHTML=`
+<td contenteditable>${c||""}</td>
+<td contenteditable>${p||""}</td>
+<td contenteditable>${m||""}</td>
+<td contenteditable oninput="calc()">${custo||0}</td>
+<td contenteditable oninput="parseLances(this)">${l||0}</td>
+<td class="qtd">0</td>
+<td class="val">0</td>
+<td contenteditable oninput="calc()">${min||10}</td>
+<td contenteditable>${obs||""}</td>
+<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
+`;
+
+parseLances(r.cells[4]);
+}
+
+function addRow(){insertRow();}
+
+function parseLances(c){
+const r=c.parentElement;
+const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
+const total=parts.reduce((a,b)=>a+b,0);
+r.querySelector(".qtd").innerText=total;
+calc();
+}
+
+function calc(){
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+const custo=parseFloat(r.cells[3].innerText)||0;
+const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
+const min=parseFloat(r.cells[7].innerText)||0;
+
+const valor=custo*metros;
+r.querySelector(".val").innerText=valor.toFixed(2);
+
+if(metros<min)
+r.querySelector(".qtd").classList.add("low");
+else
+r.querySelector(".qtd").classList.remove("low");
+});
+}
+
+function filterTable(){
+const v=search.value.toUpperCase();
+document.querySelectorAll("#table tbody tr").forEach(tr=>{
+tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
+});
+}
+
 // 🔵 RACKS
 async function carregarRacks(){
 const r=await fetch(WEB_APP_URL+"?action=racks");
 racks=await r.json();
 mostrarRacks(racks);
-gerarGrafico();
 }
 
 function mostrarRacks(lista){
-
 listaRacks.innerHTML="";
 
 lista.forEach(r=>{
-
 let cor="green";
 if(r[7]==0) cor="red";
 else if(r[7]<=2) cor="orange";
@@ -143,14 +250,12 @@ Qtd: <span style="color:${cor}">${r[7]}</span><br>
 });
 }
 
-// 🔎 BUSCA
 function buscarRack(){
 const t=buscaRack.value.toLowerCase();
 const f=racks.filter(r=>r[1].toLowerCase().includes(t));
 mostrarRacks(f);
 }
 
-// ➕ SALVAR
 async function salvarRack(){
 
 await fetch(WEB_APP_URL,{
@@ -172,23 +277,8 @@ obs:""
 })
 });
 
-alert("Salvo!");
+alert("Rack salvo!");
 carregarRacks();
-}
-
-// 📊 GRÁFICO
-function gerarGrafico(){
-
-const nomes=racks.map(r=>r[1]);
-const qtd=racks.map(r=>Number(r[7]));
-
-new Chart(graficoRacks,{
-type:"bar",
-data:{
-labels:nomes,
-datasets:[{label:"Estoque",data:qtd}]
-}
-});
 }
 
 </script>
