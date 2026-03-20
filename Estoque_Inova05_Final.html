@@ -6,42 +6,47 @@
 
 <style>
 body{margin:0;font-family:Segoe UI}
-#loginTela{height:100vh;display:flex;justify-content:center;align-items:center;background:#1e1e1e}
-.login-box{background:rgba(0,0,0,0.8);padding:40px;border-radius:12px;text-align:center;color:white;width:320px}
-.login-box h2{color:#00c37a}
-.login-box input{width:100%;padding:10px;margin:8px 0;border:none;border-radius:5px}
-.login-box button{width:100%;padding:10px;background:#00c37a;border:none;border-radius:5px;color:white;cursor:pointer}
 
-#app{display:none;padding:20px;background:#f4f7f6;height:100vh}
+/* 🔍 BUSCA ESTILO GOOGLE */
+#search{
+width:100%;
+padding:15px 20px;
+font-size:18px;
+border-radius:30px;
+border:2px solid #ccc;
+transition:0.3s;
+margin:15px 0;
+}
+
+#search:focus{
+border-color:#008d4c;
+box-shadow:0 0 10px rgba(0,141,76,0.3);
+}
+
+/* layout */
+#app{padding:20px;background:#f4f7f6;height:100vh}
 .container{background:white;padding:20px;border-radius:10px}
 
 header{display:flex;justify-content:space-between;border-bottom:3px solid #008d4c}
-.top-buttons button{padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:pointer}
+
+.top-buttons button{
+padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:pointer
+}
+
 .btn-estoque{background:#008d4c}
 .btn-historico{background:#6c757d}
 .btn-add{background:#0056b3}
 .btn-save{background:#28a745}
 
-.hidden{display:none}
-.low{background:red;color:white;padding:3px}
-
 table{width:100%;border-collapse:collapse}
 th{background:#008d4c;color:white;padding:10px}
 td{padding:8px;border-bottom:1px solid #ddd}
+
+.low{background:red;color:white;padding:3px}
 </style>
 </head>
 
 <body>
-
-<div id="loginTela">
-<div class="login-box">
-<h2>Inova Informática</h2>
-<input id="user" placeholder="Usuário">
-<input id="pass" type="password" placeholder="Senha">
-<button onclick="login()">Entrar</button>
-<p>Deixe vazio para apenas visualizar</p>
-</div>
-</div>
 
 <div id="app">
 <div class="container">
@@ -57,8 +62,9 @@ td{padding:8px;border-bottom:1px solid #ddd}
 </div>
 </header>
 
-<input id="search" placeholder="Pesquisar..." onkeyup="filterTable()">
+<input id="search" placeholder="🔎 Buscar produto...">
 
+<!-- ESTOQUE -->
 <div id="estoqueView">
 <table id="table">
 <thead>
@@ -72,30 +78,16 @@ td{padding:8px;border-bottom:1px solid #ddd}
 </table>
 </div>
 
-<div id="historicoView" class="hidden">
-<h3>Histórico</h3>
-<table>
-<thead><tr><th>Data</th><th>Itens</th></tr></thead>
-<tbody id="histBody"></tbody>
-</table>
-</div>
+<!-- HISTORICO -->
+<div id="historicoView" style="display:none"></div>
 
-<div id="racksView" class="hidden">
+<!-- RACKS -->
+<div id="racksView" style="display:none">
 <h3>📦 Racks</h3>
 
-<input id="buscaRack" placeholder="Buscar..." onkeyup="buscarRack()">
+<input id="buscaRack" placeholder="Buscar racks..." onkeyup="buscarRack()">
+
 <div id="listaRacks"></div>
-
-<h3>➕ Adicionar</h3>
-<input id="codigo" placeholder="Código">
-<input id="modelo" placeholder="Modelo">
-<input id="marca" placeholder="Marca">
-<input id="altura" placeholder="Altura">
-<input id="prof" placeholder="Profundidade">
-<input id="qtd" placeholder="Qtd">
-<input id="custo" placeholder="Custo">
-
-<button onclick="salvarRack()">Salvar</button>
 </div>
 
 </div>
@@ -106,63 +98,28 @@ td{padding:8px;border-bottom:1px solid #ddd}
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
 let racks=[];
-let tipoUsuario="view";
 
-// LOGIN
-function login(){
-
-const u=user.value;
-const p=pass.value;
-
-if(u==="sandro" && p==="123"){
-tipoUsuario="admin";
-entrar();
-return;
+// TELAS
+function showEstoque(){
+estoqueView.style.display="block";
+historicoView.style.display="none";
+racksView.style.display="none";
 }
 
-if(u==="" && p===""){
-tipoUsuario="view";
-entrar();
-return;
+function showHistorico(){
+historicoView.style.display="block";
+estoqueView.style.display="none";
+racksView.style.display="none";
 }
 
-alert("Login inválido");
+function showRacks(){
+racksView.style.display="block";
+estoqueView.style.display="none";
+historicoView.style.display="none";
+carregarRacks();
 }
 
-function entrar(){
-loginTela.style.display="none";
-app.style.display="block";
-
-if(tipoUsuario==="view"){
-bloquearEdicao();
-}
-
-pullData();
-}
-
-// BLOQUEIO TOTAL
-function bloquearEdicao(){
-
-document.querySelectorAll("[contenteditable]").forEach(e=>{
-e.setAttribute("contenteditable","false");
-});
-
-document.querySelectorAll("button").forEach(btn=>{
-if(btn.innerText.includes("🗑️")){
-btn.style.display="none";
-}
-});
-
-document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
-b.style.display="none";
-});
-
-document.querySelectorAll("#racksView input, #racksView button").forEach(el=>{
-el.disabled = true;
-});
-}
-
-// RESTANTE SISTEMA (igual antes)
+// ESTOQUE
 async function pullData(){
 const r=await fetch(WEB_APP_URL+"?action=ler");
 const data=await r.json();
@@ -175,83 +132,25 @@ insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
 });
 }
 
-async function pushData(){
-const rows=document.querySelectorAll("#table tbody tr");
-
-const data=[...rows].map(r=>[
-r.cells[0].innerText,
-r.cells[1].innerText,
-r.cells[2].innerText,
-r.cells[3].innerText,
-r.cells[4].innerText,
-r.cells[7].innerText,
-r.cells[8].innerText
-]);
-
-await fetch(WEB_APP_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({dados:data})
-});
-
-alert("Salvo com sucesso");
-}
-
 function insertRow(c,p,m,custo,l,min,obs){
 const tbody=document.querySelector("#table tbody");
-
 const r=tbody.insertRow();
 
 r.innerHTML=`
-<td contenteditable>${c||""}</td>
-<td contenteditable>${p||""}</td>
-<td contenteditable>${m||""}</td>
-<td contenteditable oninput="calc()">${custo||0}</td>
-<td contenteditable oninput="parseLances(this)">${l||0}</td>
-<td class="qtd">0</td>
-<td class="val">0</td>
-<td contenteditable oninput="calc()">${min||10}</td>
-<td contenteditable>${obs||""}</td>
-<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
+<td>${c}</td>
+<td>${p}</td>
+<td>${m}</td>
+<td>${custo}</td>
+<td>${l}</td>
+<td>${l}</td>
+<td>${(custo*l).toFixed(2)}</td>
+<td>${min}</td>
+<td>${obs}</td>
+<td></td>
 `;
-
-parseLances(r.cells[4]);
 }
 
-function addRow(){insertRow();}
-
-function parseLances(c){
-const r=c.parentElement;
-const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
-const total=parts.reduce((a,b)=>a+b,0);
-r.querySelector(".qtd").innerText=total;
-calc();
-}
-
-function calc(){
-document.querySelectorAll("#table tbody tr").forEach(r=>{
-const custo=parseFloat(r.cells[3].innerText)||0;
-const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
-const min=parseFloat(r.cells[7].innerText)||0;
-
-const valor=custo*metros;
-r.querySelector(".val").innerText=valor.toFixed(2);
-
-if(metros<min)
-r.querySelector(".qtd").classList.add("low");
-else
-r.querySelector(".qtd").classList.remove("low");
-});
-}
-
-function filterTable(){
-const v=search.value.toUpperCase();
-document.querySelectorAll("#table tbody tr").forEach(tr=>{
-tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
-});
-}
-
-// RACKS
+// 🔥 RACKS BONITO
 async function carregarRacks(){
 const r=await fetch(WEB_APP_URL+"?action=racks");
 racks=await r.json();
@@ -260,8 +159,20 @@ mostrarRacks(racks);
 
 function mostrarRacks(lista){
 listaRacks.innerHTML="";
+
 lista.forEach(r=>{
-listaRacks.innerHTML+=`<div>${r[1]} - Qtd: ${r[7]}</div>`;
+let cor="green";
+if(r[7]==0) cor="red";
+else if(r[7]<=2) cor="orange";
+
+listaRacks.innerHTML+=`
+<div style="border-left:5px solid #008d4c;background:#f9f9f9;margin:10px;padding:15px;border-radius:8px">
+<b style="font-size:18px">${r[1]}</b><br>
+Marca: ${r[2]}<br>
+Altura: ${r[3]} | Prof: ${r[4]}<br>
+Quantidade: <b style="color:${cor}">${r[7]}</b>
+</div>
+`;
 });
 }
 
@@ -271,28 +182,8 @@ const f=racks.filter(r=>r[1].toLowerCase().includes(t));
 mostrarRacks(f);
 }
 
-async function salvarRack(){
-await fetch(WEB_APP_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify({
-action:"addRack",
-codigo:codigo.value,
-modelo:modelo.value,
-marca:marca.value,
-altura:altura.value,
-profundidade:prof.value,
-tipo:"Rack",
-estado:"Novo",
-quantidade:qtd.value,
-custo:custo.value,
-status:"Disponível",
-obs:""
-})
-});
-alert("Rack salvo!");
-carregarRacks();
-}
+// INICIAR
+pullData();
 
 </script>
 
