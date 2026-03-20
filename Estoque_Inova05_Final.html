@@ -46,14 +46,13 @@ padding:10px;margin-left:5px;border:none;border-radius:5px;color:white;cursor:po
 .btn-add{background:#0056b3}
 .btn-save{background:#28a745}
 
-/* 🔍 BUSCA BONITA */
+/* BUSCA */
 #search{
 width:100%;
 padding:15px 20px;
 font-size:18px;
 border-radius:30px;
 border:2px solid #ccc;
-transition:0.3s;
 margin:15px 0;
 }
 
@@ -72,20 +71,16 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginTela">
 <div class="login-box">
 <h2>Inova Informática</h2>
-
 <input id="user" placeholder="Usuário">
 <input id="pass" type="password" placeholder="Senha">
-
 <button onclick="login()">Entrar</button>
 <p>Deixe vazio para visualizar</p>
 </div>
 </div>
 
-<!-- APP -->
 <div id="app">
 <div class="container">
 
@@ -102,7 +97,6 @@ td{padding:8px;border-bottom:1px solid #ddd}
 
 <input id="search" placeholder="🔎 Buscar..." onkeyup="filterTable()">
 
-<!-- ESTOQUE -->
 <div id="estoqueView">
 <table id="table">
 <thead>
@@ -116,13 +110,8 @@ td{padding:8px;border-bottom:1px solid #ddd}
 </table>
 </div>
 
-<!-- HISTÓRICO -->
-<div id="historicoView" style="display:none"></div>
-
-<!-- RACKS -->
 <div id="racksView" style="display:none">
 <h3>📦 Racks</h3>
-
 <input id="buscaRack" placeholder="Buscar racks..." onkeyup="buscarRack()">
 <div id="listaRacks"></div>
 </div>
@@ -173,7 +162,6 @@ function bloquearEdicao(){
 document.querySelectorAll("[contenteditable]").forEach(e=>{
 e.setAttribute("contenteditable","false");
 });
-
 document.querySelectorAll(".btn-add,.btn-save").forEach(b=>{
 b.style.display="none";
 });
@@ -182,20 +170,12 @@ b.style.display="none";
 // TELAS
 function showEstoque(){
 estoqueView.style.display="block";
-historicoView.style.display="none";
-racksView.style.display="none";
-}
-
-function showHistorico(){
-historicoView.style.display="block";
-estoqueView.style.display="none";
 racksView.style.display="none";
 }
 
 function showRacks(){
 racksView.style.display="block";
 estoqueView.style.display="none";
-historicoView.style.display="none";
 carregarRacks();
 }
 
@@ -207,38 +187,57 @@ tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
 });
 }
 
-// ESTOQUE
-async function pullData(){
-const r=await fetch(WEB_APP_URL+"?action=ler");
-const data=await r.json();
-
-const tbody=document.querySelector("#table tbody");
-tbody.innerHTML="";
-
-data.forEach(i=>{
-insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
-});
+// + ITEM FUNCIONANDO
+function addRow(){
+insertRow("", "", "", 0, 0, 10, "");
 }
 
 function insertRow(c,p,m,custo,l,min,obs){
+
 const tbody=document.querySelector("#table tbody");
 const r=tbody.insertRow();
 
 r.innerHTML=`
-<td contenteditable>${c||""}</td>
-<td contenteditable>${p||""}</td>
-<td contenteditable>${m||""}</td>
-<td contenteditable>${custo||0}</td>
-<td contenteditable>${l||0}</td>
-<td>${l||0}</td>
-<td>${(custo*l).toFixed(2)}</td>
-<td contenteditable>${min||10}</td>
-<td contenteditable>${obs||""}</td>
-<td><button onclick="this.parentElement.parentElement.remove()">🗑️</button></td>
+<td contenteditable>${c}</td>
+<td contenteditable>${p}</td>
+<td contenteditable>${m}</td>
+<td contenteditable oninput="calc()">${custo}</td>
+<td contenteditable oninput="parseLances(this)">${l}</td>
+<td class="qtd">0</td>
+<td class="val">0</td>
+<td contenteditable oninput="calc()">${min}</td>
+<td contenteditable>${obs}</td>
+<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
 `;
+
+parseLances(r.cells[4]);
 }
 
-// RACKS BONITO
+function parseLances(c){
+const r=c.parentElement;
+const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
+const total=parts.reduce((a,b)=>a+b,0);
+r.querySelector(".qtd").innerText=total;
+calc();
+}
+
+function calc(){
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+const custo=parseFloat(r.cells[3].innerText)||0;
+const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
+const min=parseFloat(r.cells[7].innerText)||0;
+
+const valor=custo*metros;
+r.querySelector(".val").innerText=valor.toFixed(2);
+
+if(metros<min)
+r.querySelector(".qtd").classList.add("low");
+else
+r.querySelector(".qtd").classList.remove("low");
+});
+}
+
+// RACKS
 async function carregarRacks(){
 const r=await fetch(WEB_APP_URL+"?action=racks");
 racks=await r.json();
@@ -247,18 +246,11 @@ mostrarRacks(racks);
 
 function mostrarRacks(lista){
 listaRacks.innerHTML="";
-
 lista.forEach(r=>{
-let cor="green";
-if(r[7]==0) cor="red";
-else if(r[7]<=2) cor="orange";
-
 listaRacks.innerHTML+=`
 <div style="border-left:5px solid #008d4c;background:#f9f9f9;margin:10px;padding:15px;border-radius:8px">
-<b style="font-size:18px">${r[1]}</b><br>
-Marca: ${r[2]}<br>
-Altura: ${r[3]} | Prof: ${r[4]}<br>
-Quantidade: <b style="color:${cor}">${r[7]}</b>
+<b>${r[1]}</b><br>
+Qtd: ${r[7]}
 </div>
 `;
 });
