@@ -13,6 +13,7 @@ display:flex;
 justify-content:center;
 align-items:center;
 background:#1e1e1e;
+background-size:cover;
 }
 
 .login-box{
@@ -42,6 +43,7 @@ border:none;
 border-radius:5px;
 color:white;
 cursor:pointer;
+margin-top:5px;
 }
 
 #app{display:none;padding:20px;background:#f4f7f6;height:100vh}
@@ -75,8 +77,18 @@ cursor:pointer;
 .btn-add{background:#0056b3}
 .btn-save{background:#28a745}
 
-.low{background:red;color:white}
-.ok{background:#28a745;color:white}
+#search{
+width:100%;
+padding:12px;
+margin:10px 0;
+}
+
+table{width:100%;border-collapse:collapse}
+th{background:#008d4c;color:white;padding:10px}
+td{padding:8px;border-bottom:1px solid #ddd}
+
+.hidden{display:none}
+.low{background:red;color:white;padding:3px}
 </style>
 </head>
 
@@ -86,8 +98,8 @@ cursor:pointer;
 <div class="login-box">
 <h2>Inova Informática</h2>
 <p>Sistema de Estoque</p>
-<input type="text" id="user" placeholder="Usuário">
-<input type="password" id="pass" placeholder="Senha">
+<input type="text" id="user">
+<input type="password" id="pass">
 <button onclick="login()">Entrar</button>
 </div>
 </div>
@@ -104,43 +116,31 @@ cursor:pointer;
 <div class="top-buttons">
 <button class="btn-estoque" onclick="showEstoque()">📦</button>
 <button class="btn-historico" onclick="showHistorico()">📊</button>
-<button onclick="showRacks()" style="background:#ff9800">🗄️</button>
 <button class="btn-add" onclick="addRow()">+</button>
 <button class="btn-save" onclick="pushData()">Salvar</button>
 </div>
-
 </header>
 
-<!-- ESTOQUE -->
+<input id="search" onkeyup="filterTable()" placeholder="Pesquisar">
+
 <div id="estoqueView">
-<input id="search" onkeyup="filterTable()" placeholder="Pesquisar...">
-<table id="table"><tbody></tbody></table>
+<table id="table">
+<thead>
+<tr>
+<th>Código</th><th>Produto</th><th>Marca</th>
+<th>Custo</th><th>Lances</th><th>Total</th>
+<th>Valor</th><th>Mín</th><th>Status</th><th></th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
-<!-- HISTORICO -->
 <div id="historicoView" class="hidden">
 <h3>Histórico</h3>
-<table><tbody id="histBody"></tbody></table>
-</div>
-
-<!-- RACKS -->
-<div id="racksView" class="hidden">
-
-<h3>🗄️ Racks</h3>
-
-<input id="searchRacks" onkeyup="filterRacks()" placeholder="Pesquisar rack">
-
-<br><br>
-
-<button onclick="addRack()">+ Rack</button>
-<button onclick="saveRacks()">Salvar</button>
-
-<h4 id="totalRacks">Total: 0</h4>
-
 <table>
-<tbody id="racksBody"></tbody>
+<tbody id="histBody"></tbody>
 </table>
-
 </div>
 
 </div>
@@ -150,115 +150,115 @@ cursor:pointer;
 
 const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzOHa0XdhTQFhU2Z6soNAOT6r5ViJo0ZlUIOpVfRLo-jIIlgMWiL9pNN996-T6XqA77/exec";
 
-/* LOGIN */
 let tipoUsuario="";
 
-const usuarios=[{user:"sandro",senha:"123",tipo:"admin"}];
-
 function login(){
-const u=user.value;
-const p=pass.value;
-
-if(u==="" && p===""){tipoUsuario="view";entrar();return;}
-
-const ok=usuarios.find(x=>x.user==u && x.senha==p);
-if(ok){tipoUsuario=ok.tipo;entrar();}else alert("Login inválido");
-}
-
-function entrar(){
+tipoUsuario="admin";
 loginTela.style.display="none";
 app.style.display="block";
 pullData();
 }
 
-/* VIEWS */
 function showEstoque(){
 estoqueView.classList.remove("hidden");
 historicoView.classList.add("hidden");
-racksView.classList.add("hidden");
 }
 
 function showHistorico(){
 estoqueView.classList.add("hidden");
 historicoView.classList.remove("hidden");
-racksView.classList.add("hidden");
 loadHistorico();
 }
 
-function showRacks(){
-estoqueView.classList.add("hidden");
-historicoView.classList.add("hidden");
-racksView.classList.remove("hidden");
-loadRacks();
-}
-
-/* RACKS */
-async function loadRacks(){
-const r=await fetch(WEB_APP_URL+"?action=racks");
+async function loadHistorico(){
+const r=await fetch(WEB_APP_URL+"?action=historico");
 const data=await r.json();
-
-racksBody.innerHTML="";
-let total=0;
-
+histBody.innerHTML="";
 data.forEach(i=>{
-const qtd=parseInt(i[1])||0;
-total+=qtd;
-
-const cor=qtd===0?"low":"ok";
-
-racksBody.innerHTML+=`
-<tr>
-<td contenteditable>${i[0]}</td>
-<td contenteditable class="${cor}">${qtd}</td>
-<td><button onclick="this.parentElement.parentElement.remove();calcTotalRacks()">🗑️</button></td>
-</tr>`;
-});
-
-totalRacks.innerText="Total: "+total;
-}
-
-function addRack(){
-racksBody.innerHTML+=`
-<tr>
-<td contenteditable>Novo Rack</td>
-<td contenteditable>0</td>
-<td><button onclick="this.parentElement.parentElement.remove();calcTotalRacks()">🗑️</button></td>
-</tr>`;
-}
-
-function calcTotalRacks(){
-let total=0;
-document.querySelectorAll("#racksBody tr").forEach(r=>{
-const qtd=parseInt(r.cells[1].innerText)||0;
-total+=qtd;
-r.cells[1].className=qtd===0?"low":"ok";
-});
-totalRacks.innerText="Total: "+total;
-}
-
-function filterRacks(){
-const v=searchRacks.value.toUpperCase();
-document.querySelectorAll("#racksBody tr").forEach(tr=>{
-tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
+histBody.innerHTML+=`<tr><td>${new Date(i[0]).toLocaleString()}</td><td>${i[1]}</td></tr>`;
 });
 }
 
-async function saveRacks(){
+async function pullData(){
+const r=await fetch(WEB_APP_URL+"?action=ler");
+const data=await r.json();
+const tbody=document.querySelector("#table tbody");
+tbody.innerHTML="";
+data.forEach(i=>{
+insertRow(i[0],i[1],i[2],i[3],i[4],i[5],i[6]);
+});
+}
 
-const rows=document.querySelectorAll("#racksBody tr");
+async function pushData(){
+
+const rows=document.querySelectorAll("#table tbody tr");
 
 const data=[...rows].map(r=>[
 r.cells[0].innerText,
-r.cells[1].innerText
+r.cells[1].innerText,
+r.cells[2].innerText,
+r.cells[3].innerText,
+r.cells[4].innerText,
+r.cells[7].innerText,
+r.cells[8].innerText
 ]);
 
 await fetch(WEB_APP_URL,{
 method:"POST",
 headers:{"Content-Type":"text/plain"},
-body:JSON.stringify({tipo:"racks",dados:data})
+body:JSON.stringify({dados:data})
 });
 
-alert("Racks salvo ✔️");
+alert("Salvo com sucesso");
+}
+
+function insertRow(c,p,m,custo,l,min,obs){
+
+const tbody=document.querySelector("#table tbody");
+
+const r=tbody.insertRow();
+
+r.innerHTML=`
+<td contenteditable>${c||""}</td>
+<td contenteditable>${p||""}</td>
+<td contenteditable>${m||""}</td>
+<td contenteditable oninput="calc()">${custo||0}</td>
+<td contenteditable oninput="parseLances(this)">${l||0}</td>
+<td class="qtd">0</td>
+<td class="val">0</td>
+<td contenteditable oninput="calc()">${min||10}</td>
+<td contenteditable>${obs||""}</td>
+<td><button onclick="this.parentElement.parentElement.remove();calc()">🗑️</button></td>
+`;
+
+parseLances(r.cells[4]);
+}
+
+function addRow(){insertRow();}
+
+function parseLances(c){
+const r=c.parentElement;
+const parts=c.innerText.split("+").map(n=>parseFloat(n)||0);
+const total=parts.reduce((a,b)=>a+b,0);
+r.querySelector(".qtd").innerText=total;
+calc();
+}
+
+function calc(){
+document.querySelectorAll("#table tbody tr").forEach(r=>{
+const custo=parseFloat(r.cells[3].innerText)||0;
+const metros=parseFloat(r.querySelector(".qtd").innerText)||0;
+const min=parseFloat(r.cells[7].innerText)||0;
+const valor=custo*metros;
+r.querySelector(".val").innerText=valor.toFixed(2);
+});
+}
+
+function filterTable(){
+const v=search.value.toUpperCase();
+document.querySelectorAll("#table tbody tr").forEach(tr=>{
+tr.style.display=tr.innerText.toUpperCase().includes(v)?"":"none";
+});
 }
 
 </script>
